@@ -1,5 +1,5 @@
-# rag_ragas_evaluation 평가 CLI(python -m ragas_eval)를 K8s Job으로 실행하는 이미지
-# 빌드: docker build -f apps/ragas-eval/Dockerfile -t youthlink/ragas-eval <rag_ragas_evaluation 경로>
+# YouthLink_Ragas_Evaluation 평가 CLI(python -m ragas_eval)를 K8s Job으로 실행하는 이미지
+# 빌드: docker build -f apps/ragas-eval/Dockerfile -t youthlink/ragas-eval <YouthLink_Ragas_Evaluation 경로>
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

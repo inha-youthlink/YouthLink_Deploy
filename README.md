@@ -10,7 +10,7 @@ YouthLink는 4개 모듈이 각자 다른 저장소에 있고 실행 방식도 �
 | RAG (FastAPI) | `YouthLink_RAG` | 상시 실행 (Deployment) |
 | 프론트 (React) | `YouthLink_Front` | 상시 실행 (Deployment, nginx) |
 | ETL (정책 적재·임베딩) | `youthlink-data-pipeline` | 매일 배치 (CronJob) |
-| 평가 (RAGAS) | `rag_ragas_evaluation` | 필요할 때 1회 (Job) |
+| 평가 (RAGAS) | `YouthLink_Ragas_Evaluation` | 필요할 때 1회 (Job) |
 
 이 저장소는 모듈별 공통 변수 설정과 배포 이미지를 관리하고, 4개 앱을 EC2 단일 노드 k3s에 배포합니다.
 

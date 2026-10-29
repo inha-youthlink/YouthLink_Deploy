@@ -40,7 +40,7 @@ jobs:
             rag) repo=inha-youthlink/YouthLink_RAG ;;
             front) repo=inha-youthlink/YouthLink_Front ;;
             etl) repo=inha-youthlink/youthlink-data-pipeline ;;
-            ragas-eval) repo=inha-youthlink/rag_ragas_evaluation ;;
+            ragas-eval) repo=inha-youthlink/YouthLink_Ragas_Evaluation ;;
           esac
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
 
