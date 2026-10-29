@@ -1,0 +1,97 @@
+# (CI) 앱 하나를 빌드해 GHCR에 push하고 overlay의 이미지 태그를 커밋. 클러스터에는 적용하지 않음
+name: build
+
+# 원하는 시점에 수동 실행 (EC2가 꺼져 있어도 됨)
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 빌드할 앱
+        type: choice
+        options: [rag, front, etl, ragas-eval]
+      ref:
+        description: 빌드할 앱 저장소의 브랜치·태그·커밋
+        default: main
+
+# 빌드가 겹치면 태그 커밋이 충돌하므로 하나씩 실행
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+# GHCR에 이미지 push, 태그 커밋 push
+permissions:
+  packages: write
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      APP: ${{ inputs.app }}
+      APP_REF: ${{ inputs.ref }}
+    steps:
+      # 이 저장소 받기 (Dockerfile, 매니페스트)
+      - uses: actions/checkout@v4
+
+      # 앱 이름 → 앱 저장소
+      - id: app
+        run: |
+          case "$APP" in
+            rag) repo=inha-youthlink/YouthLink_RAG ;;
+            front) repo=inha-youthlink/YouthLink_Front ;;
+            etl) repo=inha-youthlink/youthlink-data-pipeline ;;
+            ragas-eval) repo=inha-youthlink/rag_ragas_evaluation ;;
+          esac
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+
+      # 앱 저장소를 지정한 ref로 받기 (공개 저장소라 별도 토큰 없음)
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.app.outputs.repo }}
+          ref: ${{ inputs.ref }}
+          path: src
+
+      # 이미지 태그는 앱 저장소 커밋 SHA 앞 12자리
+      - id: tag
+        run: echo "tag=$(git -C src rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+
+      # GHCR 로그인 (workflow 기본 토큰 사용)
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 앱 저장소를 빌드 컨텍스트로 이미지 빌드 후 push (source 라벨로 GHCR 패키지를 이 저장소에 연결)
+      - env:
+          IMAGE: ghcr.io/inha-youthlink/youthlink-${{ inputs.app }}:${{ steps.tag.outputs.tag }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          VITE_MOCK_FEATURES: ${{ vars.VITE_MOCK_FEATURES }}
+        run: |
+          if [ "$APP" = front ]; then
+            docker build -f apps/front/Dockerfile --build-context conf=apps/front \
+              --build-arg VITE_API_BASE="$VITE_API_BASE" --build-arg VITE_MOCK_FEATURES="$VITE_MOCK_FEATURES" \
+              --label "org.opencontainers.image.source=$SOURCE" -t "$IMAGE" src
+          else
+            docker build -f "apps/$APP/Dockerfile" --label "org.opencontainers.image.source=$SOURCE" -t "$IMAGE" src
+          fi
+          docker push "$IMAGE"
+
+      # overlay의 이미지 태그를 바꿔 커밋 (ETL은 같은 이미지를 쓰는 지역 적재도 함께)
+      - env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          REPO: ${{ steps.app.outputs.repo }}
+        run: |
+          files="k8s/$APP/overlays/prod/kustomization.yaml"
+          if [ "$APP" = etl ]; then files="$files k8s/load-regions/overlays/prod/kustomization.yaml"; fi
+          for f in $files; do
+            sed -i -E "s#newTag: .*#newTag: $TAG#" "$f"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add $files
+          if git diff --cached --quiet; then echo "태그 변경 없음"; exit 0; fi
+          git commit -m "build: $APP $TAG ($REPO@$APP_REF)"
+          git pull --rebase
+          git push

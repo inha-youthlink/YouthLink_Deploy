@@ -20,16 +20,17 @@ YouthLink는 모듈마다 저장소와 실행 방식이 다릅니다. 배포 파
 | `apps/<앱>/` | 이미지 빌드용 Dockerfile (빌드 컨텍스트는 앱 저장소) |
 | `k8s/<앱>/base/` | 리소스별 기본 yaml (deployment, service, cronjob, job) |
 | `k8s/<앱>/overlays/prod/` | 이미지 태그, 일반 설정(`config.env`) |
-| `.github/workflows/` | `deploy.yml`(빌드·배포), `evaluate.yml`(평가 실행) |
+| `.github/workflows/` | `build.yml`(CI: 빌드·push), `deploy.yml`(CD: 클러스터 적용), `evaluate.yml`(평가 실행) |
 
 ## 배포 (GitHub Actions, 수동 실행)
 
 | workflow | 입력 | 동작 |
 | --- | --- | --- |
-| deploy | `app`: `rag`·`front`·`etl`·`ragas-eval`·`common`, `ref`: 앱 저장소 브랜치·커밋, `build`: 이미지 빌드 여부 | 빌드 → GHCR(`ghcr.io/inha-youthlink/youthlink-<app>`) push → 이미지 태그 커밋 → `kubectl apply -k k8s/<app>/overlays/prod` (`ragas-eval`은 적용하지 않음) |
+| build (CI) | `app`: `rag`·`front`·`etl`·`ragas-eval`, `ref`: 앱 저장소 브랜치·커밋 | 빌드 → GHCR(`ghcr.io/inha-youthlink/youthlink-<app>`) push → 이미지 태그 커밋. 클러스터에는 적용하지 않음 |
+| deploy (CD) | `app`: `rag`·`front`·`etl`·`common` | 현재 매니페스트를 `kubectl apply -k k8s/<app>/overlays/prod`로 적용 (EC2 self-hosted 러너) |
 | evaluate | `command`: `run`·`route`·`baseline` | 이전 평가 Job 삭제 → 평가 Job 적용 (LLM 비용 발생) |
 
-설정만 바꿀 때는 `k8s/<앱>/overlays/prod/config.env`를 커밋한 뒤 deploy를 `build: false`로 실행합니다.
+코드를 바꾸면 build → deploy 순서로 실행하고, 설정(`k8s/<앱>/overlays/prod/config.env`)만 바꿀 때는 커밋한 뒤 deploy만 실행합니다.
 
 ## 로컬 검증
 
