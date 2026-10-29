@@ -1,0 +1,53 @@
+# 매일 04:00 KST에 ETL 세 단계를 순서대로 실행하는 CronJob. 비밀값은 etl-secrets(클러스터에 수동 생성)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: youthlink-etl
+  labels:
+    app: youthlink-etl
+spec:
+  schedule: "0 4 * * *"
+  timeZone: "Asia/Seoul"
+  # 전날 실행이 안 끝났으면 새로 시작하지 않는다 (중복 실행 방지)
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 7200
+      template:
+        metadata:
+          labels:
+            app: youthlink-etl
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ecr-pull
+          containers:
+            - name: etl
+              image: youthlink/etl
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              # 앞 단계가 실패하면 뒤 단계를 실행하지 않는다
+              args:
+                - >-
+                  python etl/load_policies.py api &&
+                  python etl/generate_policy_chunks.py --write &&
+                  python etl/embed_policy_chunks.py --write
+              envFrom:
+                - configMapRef:
+                    name: etl-config
+                - secretRef:
+                    name: etl-secrets
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "1"
+                  memory: "512Mi"
+              securityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false

@@ -1,0 +1,41 @@
+# RAGAS 평가 Job. 적용하는 순간 실행되고 LLM 비용이 들므로 evaluate workflow로만 적용한다
+# 일반 설정은 ragas-eval-config(overlay가 생성), 비밀값은 ragas-eval-secrets(클러스터에 수동 생성)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ragas-eval
+  labels:
+    app: ragas-eval
+spec:
+  backoffLimit: 0
+  # offline 100건이 RAG 없이 약 33분. rag 모드는 RAG 호출이 더해지고 동시 요청이 4라 1시간을 넘을 수 있다
+  activeDeadlineSeconds: 7200
+  template:
+    metadata:
+      labels:
+        app: ragas-eval
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: ragas-eval
+          image: youthlink/ragas-eval
+          imagePullPolicy: IfNotPresent
+          # 기본: 답변 품질 평가. evaluate workflow가 command 입력에 맞게 바꾼다
+          args: ["run", "--golden", "datasets/golden_v2.jsonl"]
+          envFrom:
+            - configMapRef:
+                name: ragas-eval-config
+            - secretRef:
+                name: ragas-eval-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false

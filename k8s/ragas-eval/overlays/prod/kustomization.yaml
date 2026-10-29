@@ -1,0 +1,14 @@
+# 운영 평가: 이미지 태그(deploy workflow가 갱신)와 일반 설정
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: youthlink
+resources:
+  - ../../base
+images:
+  - name: youthlink/ragas-eval
+    newName: ECR_REGISTRY/youthlink/ragas-eval
+    newTag: latest
+configMapGenerator:
+  - name: ragas-eval-config
+    envs:
+      - config.env

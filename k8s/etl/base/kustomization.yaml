@@ -1,0 +1,5 @@
+# ETL(정책 적재 → 청크 생성 → 임베딩) 기본 리소스
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cronjob.yaml

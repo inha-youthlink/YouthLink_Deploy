@@ -1,0 +1,39 @@
+# VWorld API로 지역 마스터(region)를 적재하는 1회성 Job. 적용하는 순간 실행되므로 최초 1회만 수동 적용한다
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-regions
+  labels:
+    app: load-regions
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  # 끝나고 하루 뒤 자동 삭제 (로그 확인 시간)
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: load-regions
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: load-regions
+          image: youthlink/etl
+          imagePullPolicy: IfNotPresent
+          command: ["python", "etl/load_regions.py"]
+          # VWORLD_API_KEY, VWORLD_API_DOMAIN, DATABASE_URL을 쓴다
+          envFrom:
+            - secretRef:
+                name: etl-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
