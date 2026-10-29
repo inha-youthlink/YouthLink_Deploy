@@ -1,0 +1,66 @@
+# 평가 Job을 원하는 시점에 한 번 실행 (LLM 비용 발생)
+name: evaluate
+
+# 원하는 시점에 수동 실행
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: run(답변 품질·검색 적중률), route(라우팅), baseline(RAG 없이 LLM만)
+        type: choice
+        options: [run, route, baseline]
+
+# 평가가 겹치면 같은 이름의 Job을 지우게 되므로 하나씩 실행
+concurrency:
+  group: evaluate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: [self-hosted, k3s]
+    env:
+      COMMAND: ${{ inputs.command }}
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    steps:
+      # 이 저장소 받기 (평가 매니페스트)
+      - uses: actions/checkout@v4
+
+      # 평가 이미지가 없거나 ETL이 돌고 있으면 중단 (t3.small 메모리 부족)
+      - run: |
+          if grep -q "newName: ECR_REGISTRY" k8s/ragas-eval/overlays/prod/kustomization.yaml; then
+            echo "::error::평가 이미지가 아직 없습니다. deploy workflow를 app: ragas-eval로 먼저 실행하세요"; exit 1
+          fi
+          running=$(kubectl -n youthlink get jobs -l app=youthlink-etl -o jsonpath='{.items[?(@.status.active)].metadata.name}')
+          if [ -n "$running" ]; then
+            echo "::error::ETL이 실행 중입니다 ($running). 끝난 뒤 다시 실행하세요"; exit 1
+          fi
+
+      # 입력에 맞게 Job args를 바꾼 임시 overlay 만들기
+      - run: |
+          case "$COMMAND" in
+            run) args='["run", "--golden", "datasets/golden_v2.jsonl"]' ;;
+            baseline) args='["run", "--golden", "datasets/golden_v2.jsonl", "--baseline"]' ;;
+            route) args='["route", "--routing", "datasets/routing_v1.jsonl"]' ;;
+          esac
+          mkdir -p .eval
+          cat > .eval/kustomization.yaml <<YAML
+          resources:
+            - ../k8s/ragas-eval/overlays/prod
+          patches:
+            - target:
+                kind: Job
+                name: ragas-eval
+              patch: |-
+                - op: replace
+                  path: /spec/template/spec/containers/0/args
+                  value: $args
+          YAML
+
+      # 이전 평가 Job을 지우고 새로 적용 (Job은 적용하는 순간 실행됨)
+      - run: |
+          kubectl -n youthlink delete job ragas-eval --ignore-not-found --wait=true
+          kubectl apply -k .eval
+          echo "로그: kubectl -n youthlink logs -f job/ragas-eval"
