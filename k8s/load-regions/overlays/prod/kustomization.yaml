@@ -6,5 +6,5 @@ resources:
   - ../../base
 images:
   - name: youthlink/etl
-    newName: ECR_REGISTRY/youthlink/etl
+    newName: ghcr.io/inha-youthlink/youthlink-etl
     newTag: latest

@@ -16,8 +16,6 @@ spec:
         app: ragas-eval
     spec:
       restartPolicy: Never
-      imagePullSecrets:
-        - name: ecr-pull
       containers:
         - name: ragas-eval
           image: youthlink/ragas-eval

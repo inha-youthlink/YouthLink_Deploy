@@ -15,8 +15,6 @@ spec:
       labels:
         app: youthlink-front
     spec:
-      imagePullSecrets:
-        - name: ecr-pull
       containers:
         - name: front
           image: youthlink/front

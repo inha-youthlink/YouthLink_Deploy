@@ -23,8 +23,6 @@ spec:
             app: youthlink-etl
         spec:
           restartPolicy: Never
-          imagePullSecrets:
-            - name: ecr-pull
           containers:
             - name: etl
               image: youthlink/etl

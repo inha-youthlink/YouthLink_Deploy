@@ -1,4 +1,4 @@
-# 앱 하나를 빌드해 ECR에 push하고, 이미지 태그를 커밋한 뒤 EC2의 k3s에 적용
+# 앱 하나를 빌드해 GHCR에 push하고, 이미지 태그를 커밋한 뒤 EC2의 k3s에 적용
 name: deploy
 
 # 원하는 시점에 수동 실행
@@ -22,9 +22,9 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
-# OIDC로 AWS Role 받기, 태그 커밋 push
+# GHCR에 이미지 push, 태그 커밋 push
 permissions:
-  id-token: write
+  packages: write
   contents: write
 
 jobs:
@@ -61,41 +61,38 @@ jobs:
       - id: tag
         run: echo "tag=$(git -C src rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
 
-      # GitHub OIDC로 ECR push Role 받기
-      - uses: aws-actions/configure-aws-credentials@v4
+      # GHCR 로그인 (workflow 기본 토큰 사용)
+      - uses: docker/login-action@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ECR 로그인
-      - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # 앱 저장소를 빌드 컨텍스트로 이미지 빌드 후 push
+      # 앱 저장소를 빌드 컨텍스트로 이미지 빌드 후 push (source 라벨로 GHCR 패키지를 이 저장소에 연결)
       - env:
-          IMAGE: ${{ steps.ecr.outputs.registry }}/youthlink/${{ inputs.app }}:${{ steps.tag.outputs.tag }}
+          IMAGE: ghcr.io/inha-youthlink/youthlink-${{ inputs.app }}:${{ steps.tag.outputs.tag }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
           VITE_MOCK_FEATURES: ${{ vars.VITE_MOCK_FEATURES }}
         run: |
           if [ "$APP" = front ]; then
             docker build -f apps/front/Dockerfile --build-context conf=apps/front \
               --build-arg VITE_API_BASE="$VITE_API_BASE" --build-arg VITE_MOCK_FEATURES="$VITE_MOCK_FEATURES" \
-              -t "$IMAGE" src
+              --label "org.opencontainers.image.source=$SOURCE" -t "$IMAGE" src
           else
-            docker build -f "apps/$APP/Dockerfile" -t "$IMAGE" src
+            docker build -f "apps/$APP/Dockerfile" --label "org.opencontainers.image.source=$SOURCE" -t "$IMAGE" src
           fi
           docker push "$IMAGE"
 
-      # overlay의 이미지 주소·태그를 바꿔 커밋 (ETL은 같은 이미지를 쓰는 지역 적재도 함께)
+      # overlay의 이미지 태그를 바꿔 커밋 (ETL은 같은 이미지를 쓰는 지역 적재도 함께)
       - env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}
           TAG: ${{ steps.tag.outputs.tag }}
           REPO: ${{ steps.app.outputs.repo }}
         run: |
           files="k8s/$APP/overlays/prod/kustomization.yaml"
           if [ "$APP" = etl ]; then files="$files k8s/load-regions/overlays/prod/kustomization.yaml"; fi
           for f in $files; do
-            sed -i -E "s#newName: .*/youthlink/#newName: $REGISTRY/youthlink/#; s#newTag: .*#newTag: $TAG#" "$f"
+            sed -i -E "s#newTag: .*#newTag: $TAG#" "$f"
           done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -121,7 +118,7 @@ jobs:
 
       # 아직 한 번도 빌드하지 않은 앱은 적용하지 않음
       - run: |
-          if grep -q "newName: ECR_REGISTRY" "k8s/$APP/overlays/prod/kustomization.yaml" 2>/dev/null; then
+          if grep -q "newTag: latest" "k8s/$APP/overlays/prod/kustomization.yaml" 2>/dev/null; then
             echo "::error::$APP 이미지가 아직 없습니다. build를 켜고 다시 실행하세요"; exit 1
           fi
 

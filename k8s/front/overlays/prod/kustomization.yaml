@@ -6,5 +6,5 @@ resources:
   - ../../base
 images:
   - name: youthlink/front
-    newName: ECR_REGISTRY/youthlink/front
+    newName: ghcr.io/inha-youthlink/youthlink-front
     newTag: latest

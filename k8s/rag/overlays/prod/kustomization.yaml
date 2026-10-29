@@ -6,7 +6,7 @@ resources:
   - ../../base
 images:
   - name: youthlink/rag
-    newName: ECR_REGISTRY/youthlink/rag
+    newName: ghcr.io/inha-youthlink/youthlink-rag
     newTag: latest
 configMapGenerator:
   - name: rag-config

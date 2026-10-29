@@ -6,7 +6,7 @@ resources:
   - ../../base
 images:
   - name: youthlink/ragas-eval
-    newName: ECR_REGISTRY/youthlink/ragas-eval
+    newName: ghcr.io/inha-youthlink/youthlink-ragas-eval
     newTag: latest
 configMapGenerator:
   - name: ragas-eval-config

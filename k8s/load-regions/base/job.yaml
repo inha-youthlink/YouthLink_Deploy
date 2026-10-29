@@ -16,8 +16,6 @@ spec:
         app: load-regions
     spec:
       restartPolicy: Never
-      imagePullSecrets:
-        - name: ecr-pull
       containers:
         - name: load-regions
           image: youthlink/etl

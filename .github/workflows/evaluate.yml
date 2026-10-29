@@ -30,7 +30,7 @@ jobs:
 
       # 평가 이미지가 없거나 ETL이 돌고 있으면 중단 (t3.small 메모리 부족)
       - run: |
-          if grep -q "newName: ECR_REGISTRY" k8s/ragas-eval/overlays/prod/kustomization.yaml; then
+          if grep -q "newTag: latest" k8s/ragas-eval/overlays/prod/kustomization.yaml; then
             echo "::error::평가 이미지가 아직 없습니다. deploy workflow를 app: ragas-eval로 먼저 실행하세요"; exit 1
           fi
           running=$(kubectl -n youthlink get jobs -l app=youthlink-etl -o jsonpath='{.items[?(@.status.active)].metadata.name}')
