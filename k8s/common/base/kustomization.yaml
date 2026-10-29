@@ -1,0 +1,6 @@
+# 모든 앱이 공유하는 리소스 (네임스페이스, 외부 진입점)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - ingress.yaml

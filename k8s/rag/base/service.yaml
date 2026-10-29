@@ -1,0 +1,13 @@
+# RAG Service. 이름(youthlink-rag:8000)은 Ingress와 평가 Job의 RAG_BASE_URL이 참조하므로 바꾸지 않는다
+apiVersion: v1
+kind: Service
+metadata:
+  name: youthlink-rag
+  labels:
+    app: youthlink-rag
+spec:
+  selector:
+    app: youthlink-rag
+  ports:
+    - port: 8000
+      targetPort: 8000

@@ -1,0 +1,5 @@
+# YouthLink 리소스를 모으는 네임스페이스 (가장 먼저 적용)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: youthlink

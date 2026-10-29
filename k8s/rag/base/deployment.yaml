@@ -1,0 +1,52 @@
+# RAG 서버 Deployment. 일반 설정은 rag-config(overlay가 생성), 비밀값은 rag-secrets(클러스터에 수동 생성)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: youthlink-rag
+  labels:
+    app: youthlink-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: youthlink-rag
+  template:
+    metadata:
+      labels:
+        app: youthlink-rag
+    spec:
+      imagePullSecrets:
+        - name: ecr-pull
+      containers:
+        - name: rag
+          image: youthlink/rag
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: rag-config
+            - secretRef:
+                name: rag-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false

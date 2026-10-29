@@ -1,0 +1,25 @@
+# 외부 진입점. k3s 기본 Traefik이 80 포트에서 받아 /api는 RAG, 나머지는 프론트로 보낸다
+# /internal, /health는 노출하지 않는다 (클러스터 내부 전용)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: youthlink
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: youthlink-rag
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: youthlink-front
+                port:
+                  number: 80
