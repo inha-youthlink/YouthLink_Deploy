@@ -7,7 +7,7 @@ resources:
 images:
   - name: youthlink/rag
     newName: ghcr.io/inha-youthlink/youthlink-rag
-    newTag: latest
+    newTag: 3a11f67c6a9a
 configMapGenerator:
   - name: rag-config
     envs:
