@@ -21,7 +21,8 @@ spec:
           image: youthlink/ragas-eval
           imagePullPolicy: IfNotPresent
           # 기본: 답변 품질 평가. evaluate workflow가 command 입력에 맞게 바꾼다
-          args: ["run", "--golden", "datasets/golden_v2.jsonl"]
+          # 데이터셋은 이미지에 포함된 golden_vN 중 번호가 가장 큰 파일을 평가 CLI가 고른다
+          args: ["run"]
           envFrom:
             - configMapRef:
                 name: ragas-eval-config

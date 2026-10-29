@@ -39,11 +39,12 @@ jobs:
           fi
 
       # 입력에 맞게 Job args를 바꾼 임시 overlay 만들기
+      # 데이터셋은 이미지에 포함된 golden_vN·routing_vN 중 번호가 가장 큰 파일을 평가 CLI가 고른다
       - run: |
           case "$COMMAND" in
-            run) args='["run", "--golden", "datasets/golden_v2.jsonl"]' ;;
-            baseline) args='["run", "--golden", "datasets/golden_v2.jsonl", "--baseline"]' ;;
-            route) args='["route", "--routing", "datasets/routing_v1.jsonl"]' ;;
+            run) args='["run"]' ;;
+            baseline) args='["run", "--baseline"]' ;;
+            route) args='["route"]' ;;
           esac
           mkdir -p .eval
           cat > .eval/kustomization.yaml <<YAML
