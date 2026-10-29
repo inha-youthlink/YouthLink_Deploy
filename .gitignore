@@ -1,0 +1,10 @@
+# 비밀값·로컬 산출물은 커밋하지 않는다
+.env
+.env.*
+*.pem
+kubeconfig*
+.idea/
+.vscode/
+.omc/
+src/
+.eval/
