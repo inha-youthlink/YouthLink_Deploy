@@ -49,12 +49,11 @@ jobs:
           esac
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
 
-      # 앱 저장소를 지정한 ref로 받기 (읽기 전용 토큰)
+      # 앱 저장소를 지정한 ref로 받기 (공개 저장소라 별도 토큰 없음)
       - uses: actions/checkout@v4
         with:
           repository: ${{ steps.app.outputs.repo }}
           ref: ${{ inputs.ref }}
-          token: ${{ secrets.APP_REPOS_TOKEN }}
           path: src
 
       # 이미지 태그는 앱 저장소 커밋 SHA 앞 12자리

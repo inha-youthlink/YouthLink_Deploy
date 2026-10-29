@@ -28,7 +28,7 @@ YouthLink 앱 4개(RAG, 프론트, ETL, 평가)를 EC2 단일 노드 k3s에 배�
 
 | 위치 | 값 |
 | --- | --- |
-| Secrets | `APP_REPOS_TOKEN`: 앱 저장소 4개 읽기 전용 fine-grained 토큰. GHCR push는 workflow 기본 토큰을 써서 따로 등록하지 않음 |
+| Secrets | 없음. 앱 저장소가 공개라 checkout에, GHCR push에는 workflow 기본 토큰을 씀 |
 | Variables | (선택) `VITE_API_BASE`, `VITE_MOCK_FEATURES` |
 | Settings → Actions → General | "Require approval for all outside collaborators", Workflow permissions "Read and write permissions" |
 | GHCR 패키지 공개 | 앱마다 첫 빌드 후 조직 Packages → `youthlink-<앱>` → Package settings → Change visibility → Public. 비공개로 두면 k3s가 이미지를 받지 못함 |
