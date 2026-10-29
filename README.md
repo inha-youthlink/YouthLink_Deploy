@@ -1,6 +1,15 @@
 # YouthLink_Deploy
 
-YouthLink 앱 4개(RAG, 프론트, ETL, 평가)를 EC2 단일 노드 k3s에 배포하는 저장소입니다. 앱 저장소는 소스코드만 관리하고, 이미지 빌드·매니페스트·일반 설정·배포는 모두 여기서 합니다.
+YouthLink는 모듈마다 저장소와 실행 방식이 다릅니다. 배포 파일(Dockerfile, k8s 매니페스트, 설정, CI)을 각 저장소에 두면 같은 일을 네 곳에서 따로 관리하게 되고, 배포 시점과 이력도 흩어집니다. 그래서 앱 저장소는 소스코드만 관리하고, 배포는 이 저장소 하나에서 합니다.
+
+| 모듈 | 저장소 | 실행 방식 |
+| --- | --- | --- |
+| RAG (FastAPI) | `YouthLink_RAG` | 상시 실행 (Deployment) |
+| 프론트 (React) | `YouthLink_Front` | 상시 실행 (Deployment, nginx) |
+| ETL (정책 적재·임베딩) | `youthlink-data-pipeline` | 매일 배치 (CronJob) |
+| 평가 (RAGAS) | `rag_ragas_evaluation` | 필요할 때 1회 (Job) |
+
+이 저장소는 모듈별 공통 변수 설정과 배포 이미지를 관리하고, 4개 앱을 EC2 단일 노드 k3s에 배포합니다.
 
 구성, 설치 순서, 결정 이유는 `docs/배포계획.md`를 참고합니다.
 
