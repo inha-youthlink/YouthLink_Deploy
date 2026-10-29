@@ -1,0 +1,10 @@
+.env
+.venv
+.git
+.github
+.idea
+.omc
+**/__pycache__
+etl/logs
+tests
+docs
