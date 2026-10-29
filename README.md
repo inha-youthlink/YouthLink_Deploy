@@ -11,14 +11,13 @@ YouthLink 앱 4개(RAG, 프론트, ETL, 평가)를 EC2 단일 노드 k3s에 배�
 | `apps/<앱>/` | 이미지 빌드용 Dockerfile (빌드 컨텍스트는 앱 저장소) |
 | `k8s/<앱>/base/` | 리소스별 기본 yaml (deployment, service, cronjob, job) |
 | `k8s/<앱>/overlays/prod/` | 이미지 태그, 일반 설정(`config.env`) |
-| `scripts/ecr-refresh.sh` | ECR pull 토큰 갱신 (EC2 root cron) |
 | `.github/workflows/` | `deploy.yml`(빌드·배포), `evaluate.yml`(평가 실행) |
 
 ## 배포 (GitHub Actions, 수동 실행)
 
 | workflow | 입력 | 동작 |
 | --- | --- | --- |
-| deploy | `app`: `rag`·`front`·`etl`·`ragas-eval`·`common`, `ref`: 앱 저장소 브랜치·커밋, `build`: 이미지 빌드 여부 | 빌드 → ECR push → 이미지 태그 커밋 → `kubectl apply -k k8s/<app>/overlays/prod` (`ragas-eval`은 적용하지 않음) |
+| deploy | `app`: `rag`·`front`·`etl`·`ragas-eval`·`common`, `ref`: 앱 저장소 브랜치·커밋, `build`: 이미지 빌드 여부 | 빌드 → GHCR(`ghcr.io/inha-youthlink/youthlink-<app>`) push → 이미지 태그 커밋 → `kubectl apply -k k8s/<app>/overlays/prod` (`ragas-eval`은 적용하지 않음) |
 | evaluate | `command`: `run`·`route`·`baseline` | 이전 평가 Job 삭제 → 평가 Job 적용 (LLM 비용 발생) |
 
 설정만 바꿀 때는 `k8s/<앱>/overlays/prod/config.env`를 커밋한 뒤 deploy를 `build: false`로 실행합니다.
@@ -29,9 +28,10 @@ YouthLink 앱 4개(RAG, 프론트, ETL, 평가)를 EC2 단일 노드 k3s에 배�
 
 | 위치 | 값 |
 | --- | --- |
-| Secrets | `APP_REPOS_TOKEN`: 앱 저장소 4개 읽기 전용 fine-grained 토큰, `AWS_ROLE_ARN`: ECR push Role(`arn:aws:iam::<계정 ID>:role/youthlink-github-deploy`), `AWS_REGION`: ECR 리전 |
+| Secrets | `APP_REPOS_TOKEN`: 앱 저장소 4개 읽기 전용 fine-grained 토큰. GHCR push는 workflow 기본 토큰을 써서 따로 등록하지 않음 |
 | Variables | (선택) `VITE_API_BASE`, `VITE_MOCK_FEATURES` |
 | Settings → Actions → General | "Require approval for all outside collaborators", Workflow permissions "Read and write permissions" |
+| GHCR 패키지 공개 | 앱마다 첫 빌드 후 조직 Packages → `youthlink-<앱>` → Package settings → Change visibility → Public. 비공개로 두면 k3s가 이미지를 받지 못함 |
 
 ### EC2 (Amazon Linux 2023)
 
@@ -45,13 +45,7 @@ kubectl get nodes
 # 화면의 Download·Configure 명령을 ec2-user로 실행하고, 라벨을 물으면 k3s 입력
 sudo ./svc.sh install && sudo ./svc.sh start
 
-# 공통 리소스는 deploy workflow(app: common)로 적용한 뒤 아래를 진행한다
-
-# ECR pull Secret 갱신 (토큰 12시간 만료 → 6시간마다)
-sudo dnf install -y cronie && sudo systemctl enable --now crond
-sudo install -D -m 755 scripts/ecr-refresh.sh /opt/youthlink/ecr-refresh.sh
-sudo AWS_REGION=ap-northeast-2 /opt/youthlink/ecr-refresh.sh
-echo '0 */6 * * * AWS_REGION=ap-northeast-2 /opt/youthlink/ecr-refresh.sh >> /var/log/ecr-refresh.log 2>&1' | sudo crontab -
+# 공통 리소스(namespace, ingress)는 deploy workflow(app: common)로 적용한 뒤 아래 Secret을 만든다
 ```
 
 ### Secret (값은 직접 입력, 파일·저장소에 남기지 않음)
