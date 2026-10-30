@@ -7,7 +7,7 @@ resources:
 images:
   - name: youthlink/ragas-eval
     newName: ghcr.io/inha-youthlink/youthlink-ragas-eval
-    newTag: 398054cf0a09
+    newTag: 58fda5269ab9
 configMapGenerator:
   - name: ragas-eval-config
     envs:
