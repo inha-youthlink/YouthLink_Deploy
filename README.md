@@ -31,7 +31,7 @@ YouthLink는 4개 모듈이 각자 다른 저장소에 있고 실행 방식도 �
 | --- | --- | --- |
 | build (CI) | `app`: `rag`·`front`·`etl`·`ragas-eval`, `ref`: 앱 저장소 브랜치·커밋 | 빌드 → GHCR(`ghcr.io/inha-youthlink/youthlink-<app>`) push → 이미지 태그 커밋. 클러스터에는 적용하지 않음 |
 | deploy (CD) | `app`: `rag`·`front`·`etl`·`common` | 현재 매니페스트를 `kubectl apply -k k8s/<app>/overlays/prod`로 적용 (EC2 self-hosted 러너) |
-| evaluate | `command`: `run`·`route`·`baseline` | 이전 평가 Job 삭제 → 평가 Job 적용 (LLM 비용 발생) |
+| evaluate | `command`: `run`·`route`·`baseline` | 이전 평가 Job 삭제 → 평가 Job 적용 → 끝날 때까지 대기 → 성적표를 실행 화면 Artifacts(`eval-report-*`)로 첨부 (LLM 비용 발생) |
 
 코드를 바꾸면 build → deploy 순서로 실행하고, 설정(`k8s/<앱>/overlays/prod/config.env`)만 바꿀 때는 커밋한 뒤 deploy만 실행합니다.
 

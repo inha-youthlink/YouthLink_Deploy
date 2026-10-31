@@ -21,6 +21,8 @@ permissions:
 jobs:
   evaluate:
     runs-on: [self-hosted, k3s]
+    # Job 실행 제한(activeDeadlineSeconds 2시간)에 여유를 둠
+    timeout-minutes: 150
     env:
       COMMAND: ${{ inputs.command }}
       KUBECONFIG: /etc/rancher/k3s/k3s.yaml
@@ -41,10 +43,11 @@ jobs:
       # 입력에 맞게 Job args를 바꾼 임시 overlay 만들기
       # 데이터셋은 이미지에 포함된 golden_vN·routing_vN 중 번호가 가장 큰 파일을 평가 CLI가 고른다
       - run: |
+          # --report: 끝나면 성적표를 로그로 내보냄 (아래에서 잘라 첨부 파일로 저장)
           case "$COMMAND" in
-            run) args='["run"]' ;;
-            baseline) args='["run", "--baseline"]' ;;
-            route) args='["route"]' ;;
+            run) args='["run", "--report"]' ;;
+            baseline) args='["run", "--baseline", "--report"]' ;;
+            route) args='["route", "--report"]' ;;
           esac
           mkdir -p .eval
           cat > .eval/kustomization.yaml <<YAML
@@ -64,4 +67,41 @@ jobs:
       - run: |
           kubectl -n youthlink delete job ragas-eval --ignore-not-found --wait=true
           kubectl apply -k .eval
-          echo "로그: kubectl -n youthlink logs -f job/ragas-eval"
+          echo "진행 로그: kubectl -n youthlink logs -f job/ragas-eval"
+
+      # Job이 끝날 때까지 대기 (activeDeadlineSeconds를 넘기면 Job이 Failed가 되어 끝난다)
+      - run: |
+          while :; do
+            state=$(kubectl -n youthlink get job ragas-eval -o jsonpath='{.status.conditions[?(@.status=="True")].type}')
+            case " $state " in
+              *" Complete "*|*" Failed "*) break ;;
+            esac
+            sleep 30
+          done
+          echo "JOB_STATE=$state" >> "$GITHUB_ENV"
+
+      # 로그를 남기고 성적표 구간(REPORT BEGIN ~ END)을 파일로 자름
+      - if: always()
+        run: |
+          mkdir -p reports
+          if ! kubectl -n youthlink logs job/ragas-eval > reports/eval.log; then
+            echo "::warning::로그를 가져오지 못했습니다 (실행 시간 초과로 Pod가 지워졌을 수 있음)"
+          fi
+          cat reports/eval.log
+          awk '/^===== REPORT BEGIN .+ =====$/ { out = "reports/" $4; next }
+               /^===== REPORT END =====$/ { close(out); out = ""; next }
+               out != "" { print > out }' reports/eval.log
+          ls reports
+
+      # 실행 화면 Artifacts에서 내려받음
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report-${{ inputs.command }}-${{ github.run_number }}
+          path: reports/
+
+      # 평가가 실패했거나 미완료 run이 있으면 workflow도 실패로 표시
+      - run: |
+          if [ "$JOB_STATE" != "${JOB_STATE#*Complete}" ]; then exit 0; fi
+          echo "::error::평가 Job이 완료되지 않았습니다 ($JOB_STATE). 로그와 성적표를 확인하세요"
+          exit 1
