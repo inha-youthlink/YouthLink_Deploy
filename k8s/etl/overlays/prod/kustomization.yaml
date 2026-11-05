@@ -7,7 +7,7 @@ resources:
 images:
   - name: youthlink/etl
     newName: ghcr.io/inha-youthlink/youthlink-etl
-    newTag: b1406b6db92d
+    newTag: 2099c9453cb5
 configMapGenerator:
   - name: etl-config
     envs:
