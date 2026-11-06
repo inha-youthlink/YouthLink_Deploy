@@ -29,11 +29,12 @@ spec:
               imagePullPolicy: IfNotPresent
               command: ["/bin/sh", "-c"]
               # 앞 단계가 실패하면 뒤 단계를 실행하지 않는다
+              # 임베딩 프록시가 요청당 입력 32개까지만 받아서 기본값 100 대신 32로 보낸다
               args:
                 - >-
                   python etl/load_policies.py api &&
                   python etl/generate_policy_chunks.py --write &&
-                  python etl/embed_policy_chunks.py --write
+                  python etl/embed_policy_chunks.py --write --batch-size 32
               envFrom:
                 - configMapRef:
                     name: etl-config
