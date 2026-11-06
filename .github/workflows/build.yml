@@ -67,11 +67,10 @@ jobs:
           IMAGE: ghcr.io/inha-youthlink/youthlink-${{ inputs.app }}:${{ steps.tag.outputs.tag }}
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
-          VITE_MOCK_FEATURES: ${{ vars.VITE_MOCK_FEATURES }}
         run: |
           if [ "$APP" = front ]; then
             docker build -f apps/front/Dockerfile --build-context conf=apps/front \
-              --build-arg VITE_API_BASE="$VITE_API_BASE" --build-arg VITE_MOCK_FEATURES="$VITE_MOCK_FEATURES" \
+              --build-arg VITE_API_BASE="$VITE_API_BASE" \
               --label "org.opencontainers.image.source=$SOURCE" -t "$IMAGE" src
           else
             docker build -f "apps/$APP/Dockerfile" --label "org.opencontainers.image.source=$SOURCE" -t "$IMAGE" src

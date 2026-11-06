@@ -9,11 +9,10 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-# Vite는 VITE_* 값을 빌드할 때 JS에 고정한다. 빈 값이면 /api(같은 출처)로 호출하고 mock은 끈다
+# Vite는 VITE_* 값을 빌드할 때 JS에 고정한다. 빈 값이면 /api(같은 출처)로 호출한다
+# VITE_MOCK_FEATURES는 넘기지 않아 mock(MSW)은 항상 꺼진다
 ARG VITE_API_BASE=""
-ARG VITE_MOCK_FEATURES=""
-ENV VITE_API_BASE=$VITE_API_BASE \
-    VITE_MOCK_FEATURES=$VITE_MOCK_FEATURES
+ENV VITE_API_BASE=$VITE_API_BASE
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine
