@@ -7,4 +7,4 @@ resources:
 images:
   - name: youthlink/etl
     newName: ghcr.io/inha-youthlink/youthlink-etl
-    newTag: 89ad310e4720
+    newTag: 8d80785b06ad
