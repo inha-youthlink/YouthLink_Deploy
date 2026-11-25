@@ -1,4 +1,4 @@
-# 매일 04:00 KST에 ETL 세 단계를 순서대로 실행하는 CronJob. 비밀값은 etl-secrets(클러스터에 수동 생성)
+# 매일 04:00 KST에 정책 파이프라인(적재 → 청크 → 임베딩 → RAG 발행 → 검증)을 실행하는 CronJob. 비밀값은 etl-secrets(클러스터에 수동 생성)
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -28,13 +28,12 @@ spec:
               image: youthlink/etl
               imagePullPolicy: IfNotPresent
               command: ["/bin/sh", "-c"]
-              # 앞 단계가 실패하면 뒤 단계를 실행하지 않는다
-              # 임베딩 프록시가 요청당 입력 32개까지만 받아서 기본값 100 대신 32로 보낸다
+              # 단계별 이력을 policy_pipeline_job에 남긴다. 웹 CronJob은 이 이력이 성공이어야 시작한다
+              # 최근 실패한 실행이 있으면 실패한 단계부터 이어서 한다
+              # 임베딩 배치 크기는 스크립트 기본값(32)이 프록시 제한(요청당 32개)과 같다
               args:
                 - >-
-                  python etl/load_policies.py api &&
-                  python etl/generate_policy_chunks.py --write &&
-                  python etl/embed_policy_chunks.py --write --batch-size 32
+                  python etl/run_policy_pipeline.py --resume-latest-failed
               envFrom:
                 - configMapRef:
                     name: etl-config

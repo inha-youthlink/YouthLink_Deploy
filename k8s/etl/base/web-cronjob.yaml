@@ -1,0 +1,50 @@
+# 매일 05:00 KST에 웹 파이프라인(URL 동기화 → 크롤링 → AI 검증 → 웹 청크·임베딩 → RAG 발행 → 검증)을 실행하는 CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: youthlink-web-etl
+  labels:
+    app: youthlink-web-etl
+spec:
+  # 정책 CronJob(04:00) 뒤에 돈다. 정책 파이프라인이 6시간 안에 성공했어야 시작한다
+  schedule: "0 5 * * *"
+  timeZone: "Asia/Seoul"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 10800
+      template:
+        metadata:
+          labels:
+            app: youthlink-web-etl
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: web-etl
+              image: youthlink/etl
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              # 정책 파이프라인이 아직 돌고 있으면 최대 60분 기다린다
+              # 크롤링·AI 검증 건수는 스크립트 기본값(크롤링 50건, 호스트당 2건, AI 검증 20건)을 쓴다
+              args:
+                - >-
+                  python etl/run_web_pipeline.py --resume-latest-failed --policy-wait-minutes 60
+              envFrom:
+                - configMapRef:
+                    name: etl-config
+                - secretRef:
+                    name: etl-secrets
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "1"
+                  memory: "512Mi"
+              securityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
