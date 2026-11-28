@@ -7,4 +7,4 @@ resources:
 images:
   - name: youthlink/front
     newName: ghcr.io/inha-youthlink/youthlink-front
-    newTag: c1b54f9a6c77
+    newTag: bcc3d71c7e9f
